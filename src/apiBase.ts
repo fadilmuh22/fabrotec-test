@@ -14,6 +14,7 @@ export const apiRequest = async <T, K = unknown>(
     const response = await axiosClient({
       method,
       data: body,
+      params: method === "get" ? body : undefined,
       url: (internal ? "/api" : API_BASE_URL) + url,
     });
     return response.data as T;

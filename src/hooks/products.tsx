@@ -1,52 +1,73 @@
 "use client";
 
 import { apiRequest } from "@/apiBase";
-import { OrderBy, Product, ProductResponse, ProductSortBy } from "@/lib/types";
+import { Category, Product, ProductResponse } from "@/lib/types";
 import {
   useQuery,
   UseMutationOptions,
   useQueryClient,
   useMutation,
 } from "@tanstack/react-query";
+import { useState } from "react";
 
 export const productKeys = {
   all: ["products"],
+  search: (category?: string, params?: ProductSortParams) => [
+    "products",
+    category,
+    params,
+  ],
+  category: ["products", "category"],
   details: (id: string) => ["products", id],
 };
 
 const BASE_URL = "/products";
 
-export type ProductParams = Partial<{
+export type ProductSortParams = Partial<{
   sortBy: string;
   order: string;
 }>;
 
-export type UseProductParams =
-  | {
-      productParams: ProductParams | undefined;
-      filter: string | undefined;
-    }
-  | undefined;
+export const useProducts = () => {
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
-export const useProducts = (productParams: UseProductParams) => {
-  const productUrl = BASE_URL + (productParams?.filter ?? "");
+  const [productParams, setProductParams] = useState<ProductSortParams>();
 
-  return useQuery<ProductResponse>({
-    queryKey: productKeys.all,
-    queryFn: () =>
-      apiRequest<ProductResponse>(
-        productUrl,
-        "get",
-        productParams?.productParams
-      ),
+  const [productUrl, setProductUrl] = useState(BASE_URL);
+  const [productCategory, setProductCategory] = useState<string>("");
+
+  const query = useQuery<ProductResponse>({
+    queryKey: productKeys.search(productCategory, productParams),
+    queryFn: () => {
+      setIsFirstLoad(false);
+      return apiRequest<ProductResponse>(productUrl, "get", productParams);
+    },
     staleTime: Infinity,
   });
+
+  return {
+    isFirstLoad,
+    setProductCategory: (category: string) => {
+      setProductCategory(category);
+      setProductUrl(`${BASE_URL}/category/${category}`);
+    },
+    setProductParams,
+    ...query,
+  };
 };
 
 export const useProduct = (id: string) => {
   return useQuery<Product>({
     queryKey: productKeys.details(id),
     queryFn: () => apiRequest<Product>(`${BASE_URL}/${id}`, "get"),
+    staleTime: Infinity,
+  });
+};
+
+export const useProductCategories = () => {
+  return useQuery<Category[]>({
+    queryKey: productKeys.category,
+    queryFn: () => apiRequest<Category[]>(`${BASE_URL}/categories`, "get"),
     staleTime: Infinity,
   });
 };

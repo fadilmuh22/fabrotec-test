@@ -8,28 +8,26 @@ import {
   GridToolbar,
   GridSortModel,
 } from "@mui/x-data-grid";
-import { useProducts } from "@/hooks/products";
+import { ProductSortParams, useProducts } from "@/hooks/products";
 import { Box, Grid2, IconButton, Menu, MenuItem } from "@mui/material";
 import { Product } from "@/lib/types";
 import { MouseEvent, useState } from "react";
 import SkeletonTable from "@/components/common/SkeletonTable";
 import { useRouter } from "next/navigation";
+import ProductCategorySelect from "./ProductCategorySelect";
 
 export default function ProductTable() {
   const router = useRouter();
-  // const [sortModel, setSortModel] = useState<GridSortModel>();
 
-  // const { data: products, isLoading } = useProducts({
-  //   filter: "",
-  //   productParams: sortModel
-  //     ? ({
-  //         sortBy: sortModel[0].field,
-  //         order: sortModel[0].sort?.toString(),
-  //       } as ProductParams)
-  //     : undefined,
-  // });
+  const {
+    data: products,
+    isLoading,
+    isFirstLoad,
+    setProductCategory,
+    setProductParams,
+  } = useProducts();
 
-  const { data: products, isLoading } = useProducts(undefined);
+  const [category, setCategory] = useState<string>("");
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
@@ -49,8 +47,19 @@ export default function ProductTable() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handelSort = (model: GridSortModel) => {
-    // setSortModel(model);
-    console.log(model);
+    if (!model.length) {
+      setProductParams(undefined);
+      return;
+    }
+    setProductParams({
+      sortBy: model[0].field.toString(),
+      order: model[0].sort,
+    } as ProductSortParams);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setCategory(value);
+    setProductCategory(value);
   };
 
   const columns: GridColDef<Product>[] = [
@@ -126,17 +135,31 @@ export default function ProductTable() {
 
   return (
     <Box className="max-h-[80vh]">
-      {isLoading ? (
-        <SkeletonTable columns={columns} rows={5} />
-      ) : (
+      <Box>
+        <Grid2 container justifyContent="space-between" my={2}>
+          <Box className="mb-4">
+            <h1 className="text-2xl font-bold">Products</h1>
+          </Box>
+
+          <Grid2 size={4}>
+            <ProductCategorySelect
+              value={category}
+              onChange={handleCategoryChange}
+            />
+          </Grid2>
+        </Grid2>
+
+        {isFirstLoad ? <SkeletonTable columns={columns} rows={5} /> : <></>}
+
         <DataGrid
+          loading={isLoading}
           slots={{ toolbar: GridToolbar }}
           columns={columns}
           rows={products?.products ?? []}
-          // sortingMode="server"
+          sortingMode="server"
           onSortModelChange={(model) => handelSort(model)}
         />
-      )}
+      </Box>
     </Box>
   );
 }
